@@ -1,0 +1,82 @@
+%option lang = "C++"
+
+%decls %{ 
+#include <iostream> 
+#include <string> 
+#include <unordered_map>
+
+using stdstring = std::string; 
+using variables = std::unordered_map<stdstring, long>;
+%}
+
+%{ 
+    #include "tree.hpp"
+%}
+
+%node AstNode %abstract %typedef = { 
+%nocreate int line = {0}; 
+%nocreate int column = {0}; 
+}
+ 
+%node Expr AstNode %abstract
+
+// Nodo binario con dos hijos (expr1 y expr2) 
+%node BinaryExpr Expr %abstract = { 
+   Expr *expr1; 
+   Expr *expr2; 
+}
+// Nodos hoja con herencia de BinaryExpr 
+%node AddExpr BinaryExpr 
+%node MultExpr BinaryExpr
+
+// Nodo terminal con un valor literal 
+%node NumberExpr Expr = { 
+   long value; 
+}
+
+%node IdentifierExpr Expr = {
+    stdstring name;
+}
+
+%operation %virtual stdstring toString(AstNode *this) 
+toString(AddExpr) {
+    return expr1->toString() + " + " + expr2->toString();
+}
+
+toString(MultExpr) {
+    return expr1->toString() + " * " + expr2->toString();
+}
+
+toString(NumberExpr) {
+    return std::to_string(value);
+}
+
+toString(IdentifierExpr) {
+    return name;
+}
+
+%operation %virtual int evaluate(AstNode *this,variables *vars)
+
+evaluate(AddExpr) {
+    return expr1->evaluate(vars) + expr2->evaluate(vars);
+}
+
+evaluate(MultExpr) {
+    return expr1->evaluate(vars) * expr2->evaluate(vars);
+}
+
+evaluate(NumberExpr){
+    return value;
+}
+
+evaluate(IdentifierExpr){
+    auto result = vars->find(name);
+    if(result == vars->end()){
+        std::cerr << "Error: '" << name << "' no definida" << std::endl;
+        return 0;
+    }
+    return result->second;
+}
+
+
+

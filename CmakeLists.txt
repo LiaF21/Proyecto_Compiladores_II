@@ -1,0 +1,67 @@
+cmake_minimum_required(VERSION 3.10)
+project(Compilador) #es el nombre del proyecto 
+set(CMAKE_CXX_STANDARD 17) #comando set nos ayuda a declarar variables que ya existen para cmake
+set(CMAKE_CXX_STANDARD_REQUIRED ON) 
+
+find_package(BISON REQUIRED)
+find_package(Reflex REQUIRED)
+
+
+message(STATUS "Source_Dir: ${CMAKE_SOURCE_DIR}")
+message(STATUS "Binary: ${CMAKE_BINARY_DIR}")
+
+set(LEXER_SOURCE_FILE "${CMAKE_SOURCE_DIR}/Lexer.l")
+set(LEXER_CPP_FILE "${CMAKE_BINARY_DIR}/Lexer.cpp")
+set(LEXER_HPP_FILE "${CMAKE_BINARY_DIR}/Lexer.hpp")
+set(PARSER_SOURCE_FILE "${CMAKE_SOURCE_DIR}/Parser.y")
+set(PARSER_CPP_FILE "${CMAKE_BINARY_DIR}/Parser.cpp")
+set(PARSER_HPP_FILE "${CMAKE_BINARY_DIR}/Parser.hpp")
+set(TREE_SOURCE_FILE "${CMAKE_SOURCE_DIR}/Tree.tc")
+set(TREE_CPP_FILE "${CMAKE_BINARY_DIR}/Tree.cpp")
+set(TREE_HPP_FILE "${CMAKE_BINARY_DIR}/Tree.hpp")
+
+# Generate parser with Bison
+add_custom_command(
+    OUTPUT ${PARSER_CPP_FILE} ${PARSER_HPP_FILE}
+    COMMAND ${BISON_EXECUTABLE}
+			-d
+            -o ${PARSER_CPP_FILE}
+            ${PARSER_SOURCE_FILE}
+    DEPENDS ${PARSER_SOURCE_FILE}
+    COMMENT "Building the Parser......."
+)
+
+# Generate lexer with Reflex
+add_custom_command(
+	OUTPUT ${LEXER_CPP_FILE} ${LEXER_HPP_FILE}
+	COMMAND reflex --bison-cc 
+	--bison-cc-namespace=Expr 
+	--bison-cc-parser=Parser 
+	-o ${LEXER_CPP_FILE} 
+	--header-file=${LEXER_HPP_FILE} 
+	${LEXER_SOURCE_FILE}
+	DEPENDS ${LEXER_SOURCE_FILE}
+	COMMENT "Building the Lexer......."
+)
+
+# Generate AST with TreeCC
+    add_custom_command(
+        OUTPUT ${TREE_CPP_FILE} ${TREE_HPP_FILE}
+        COMMAND treecc
+                -o ${TREE_CPP_FILE}
+                -h ${TREE_HPP_FILE}
+                ${TREE_SOURCE_FILE}
+        DEPENDS ${TREE_SOURCE_FILE}
+        COMMENT "Building the TreeCC......."
+    )
+  
+
+# Create executable
+add_executable(${PROJECT_NAME} 
+    Main.cpp 
+    ${LEXER_CPP_FILE}
+    ${PARSER_CPP_FILE}
+    ${TREE_CPP_FILE})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE Reflex::ReflexLibStatic)
