@@ -2,29 +2,39 @@ Gramatica del Proyecto BNF
 
 program -> declaration_list
 
-declaration_list -> declaration declaration_list declaration_list -> ε
+declaration_list -> declaration declaration_list 
+declaration_list -> ε
 
 declaration -> varDecl declaration -> funcDecl
 
-varDecl -> “int” IDENTIFIER varDeclInit “;” varDeclInit -> “=”
-expression varDeclInit -> ε
+varDecl -> “int” IDENTIFIER varDeclInit “;” 
+varDeclInit -> “=” expression 
+varDeclInit -> ε
 
 funcDecl -> “def” IDENTIFIER “(” paramListOpt “)” “->” returnType block
-returnType -> “int” returnType -> “void”
+returnType -> “int” 
+returnType -> “void”
 
 paramListOpt -> paramList paramListOpt -> ε
 
 paramList -> param paramListTail paramListTail -> “,” param
 paramListTail paramListTail -> ε
 
-param -> “int” paramRefOpt IDENTIFIER paramRefOpt -> “ref” paramRefOpt
--> ε
+param -> “int” paramRefOpt IDENTIFIER 
+paramRefOpt -> “ref” 
+paramRefOpt -> ε
 
-statement -> matchedStmt statement -> unmatchedStmt
+statement -> matchedStmt 
+statement -> unmatchedStmt
 
-matchedStmt -> varDecl matchedStmt -> assignment matchedStmt ->
-whileStmt matchedStmt -> printStmt matchedStmt -> returnStmt matchedStmt
--> exprStmt matchedStmt -> block matchedStmt -> “if” “(” expression “)”
+matchedStmt -> varDecl 
+matchedStmt -> assignment 
+matchedStmt -> whileStmt 
+matchedStmt -> printStmt 
+matchedStmt -> returnStmt 
+matchedStmt -> exprStmt 
+matchedStmt -> block 
+matchedStmt -> “if” “(” expression “)”
 matchedStmt “else” matchedStmt
 
 unmatchedStmt -> “if” “(” expression “)” statement unmatchedStmt -> “if”
@@ -36,7 +46,8 @@ whileStmt -> “while” “(” expression “)” statement
 
 printStmt -> “print” “(” expression “)” “;”
 
-returnStmt -> “return” returnExprOpt “;” returnExprOpt -> expression
+returnStmt -> “return” returnExprOpt “;” 
+returnExprOpt -> expression
 returnExprOpt -> ε
 
 exprStmt -> funcCall “;”
@@ -46,35 +57,50 @@ statement_list statement_list -> ε
 
 expression -> logicalOr
 
-logicalOr -> logicalAnd logicalOrTail logicalOrTail -> “||” logicalAnd
-logicalOrTail logicalOrTail -> ε
+logicalOr -> logicalAnd logicalOrTail 
+logicalOrTail -> “||” logicalAnd logicalOrTail 
+logicalOrTail -> ε
 
-logicalAnd -> equality logicalAndTail logicalAndTail -> “&&” equality
-logicalAndTail logicalAndTail -> ε
+logicalAnd -> equality logicalAndTail 
+logicalAndTail -> “&&” equality logicalAndTail
+ logicalAndTail -> ε
 
-equality -> comparison equalityTail equalityTail -> “==” comparison
-equalityTail equalityTail -> “!=” comparison equalityTail equalityTail
--> ε
+equality -> comparison equalityTail 
+equalityTail -> “==” comparison equalityTail 
+equalityTail -> “!=” comparison equalityTail 
+equalityTail-> ε
 
-comparison -> term comparisonTail comparisonTail -> “<” term
-comparisonTail comparisonTail -> “>” term comparisonTail comparisonTail
--> “<=” term comparisonTail comparisonTail -> “>=” term comparisonTail
+comparison -> term comparisonTail 
+comparisonTail -> “<” term comparisonTail 
+comparisonTail -> “>” term comparisonTail 
+comparisonTail -> “<=” term comparisonTail 
+comparisonTail -> “>=” term comparisonTail
 comparisonTail -> ε
 
-term -> factor termTail termTail -> “+” factor termTail termTail -> “-”
-factor termTail termTail -> ε
+term -> factor termTail 
+termTail -> “+” factor termTail 
+termTail -> “-” factor termTail 
+termTail -> ε
 
-factor -> unary factorTail factorTail -> “*” unary factorTail factorTail
--> “/” unary factorTail factorTail -> “%” unary factorTail factorTail ->
-ε
+factor -> unary factorTail 
+factorTail -> “*” unary factorTail 
+factorTail -> “/” unary factorTail 
+factorTail -> “%” unary factorTail 
+factorTail -> ε
 
-unary -> “!” unary unary -> “-” unary unary -> primary
+unary -> “!” unary 
+unary -> “-” unary 
+unary -> primary
 
-primary -> INTEGER primary -> IDENTIFIER primary -> funcCall primary ->
-“(” expression “)”
+primary -> INTEGER 
+primary -> IDENTIFIER
+ primary -> funcCall 
+ primary -> “(” expression “)”
 
-funcCall -> IDENTIFIER “(” argListOpt “)” argListOpt -> argList
+funcCall -> IDENTIFIER “(” argListOpt “)” 
+argListOpt -> argList
 argListOpt -> ε
 
-argList -> expression argListTail argListTail -> “,” expression
-argListTail argListTail -> ε
+argList -> expression argListTail 
+argListTail -> “,” expression argListTail 
+argListTail -> ε

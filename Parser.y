@@ -2,10 +2,42 @@
 %require "3.2"
 %define api.value.type variant
 %define api.token.constructor
+
+
+%token INT "int"
+%token VOID "void"
+%token IF "if"
+%token ELSE "else"
+%token WHILE "while"
+%token PRINT "print"
+%token DEF "def"
+%token RETURN "return"
+%token REF "ref"
+
+
 %token OP_PLUS "'+'"
+%token OP_MINUS "'-'"
 %token OP_MULT "'*'"
+%token OP_DIV "'/'"
+%token OP_MOD "'%'"
+%token EQ "'=='"
+%token NEQ "'!='"
+%token LT "'<'"
+%token GT "'>'"
+%token LTE "'<='"
+%token GTE "'>='"
+
+%token AND "'&&'"
+%token OR "'||'"
+%token NOT "'!'"
+%token ASSIGN "'='"
 %token OPEN_PAR "'('"
 %token CLOSE_PAR "')'"
+%token SEMICOLON "';'"
+%token COMMA "','"
+%token OPEN_BRACE "'{'"
+%token CLOSE_BRACE "'}'"
+
 %token <int> CONST_NUMBER "num"
 %token <std::string> IDENTIFIER "identifier"
 %define api.namespace {ExprP}
@@ -56,15 +88,15 @@
 input: expr {$$ = $1; }
     ;
 
-expr: expr "+" term { $$ = new AddExpr($1, $3); }
+expr: expr OP_PLUS term { $$ = new AddExpr($1, $3); }
     | term { $$ = $1; }
     ;
 
-term: term "*" factor { $$ = new MultExpr($1, $3); }
+term: term OP_MULT factor { $$ = new MultExpr($1, $3); }
     | factor { $$ = $1; }
     ;
 
-factor: "(" expr ")" { $$ = $2; }
+factor: OPEN_PAR expr CLOSE_PAR { $$ = $2; }
       | CONST_NUMBER { 
           $$ = new NumberExpr($1);
         }

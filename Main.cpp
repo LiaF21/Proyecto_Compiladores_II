@@ -4,9 +4,19 @@
 #include "tree.hpp"
 #include <unordered_map>
 #include <memory>
+#include <fstream>
 
-int main() {
-    Lexer lexer(std::cin);
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <Archivo>" << std::endl;
+        return 1;
+    }
+    std::ifstream file(argv[1]);
+    if (!file.is_open()) {
+        std::cerr << "Error opening file: " << argv[1] << std::endl;
+        return 1;
+    }
+    Lexer lexer(file);
     std::unordered_map<std::string,int> variables;
     ExprP::Parser parser(lexer, variables);
     try {
