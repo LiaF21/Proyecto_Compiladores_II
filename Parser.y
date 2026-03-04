@@ -113,12 +113,12 @@
 %%
 
 program: declaration_list { 
-    Program* prog = new Program();
+    Nodes declarations;
     if ($1) {
-        prog->declarations = *$1;
+        declarations = *$1;
         delete $1;
     }
-    root = static_cast<AstNode*>(prog);
+    root = static_cast<AstNode*>(new Program(declarations));
 }
 ;
 
@@ -146,15 +146,10 @@ declaration: varDecl {
 ;
 
 varDecl: INT IDENTIFIER varDeclInit SEMICOLON { 
-    AstNode* stmt = static_cast<AstNode*>(new DeclStmt());
-    dynamic_cast<DeclStmt*>(stmt)->name = $2;
     if ($3) {
-        AstNode* assignStmt = static_cast<AstNode*>(new AssignStmt());
-        dynamic_cast<AssignStmt*>(assignStmt)->name = $2;
-        dynamic_cast<AssignStmt*>(assignStmt)->value = $3;
-        $$ = assignStmt;
+        $$ = static_cast<AstNode*>(new AssignStmt($2, $3));
     } else {
-        $$ = stmt;
+        $$ = static_cast<AstNode*>(new DeclStmt($2));
     }
 }
 ;
@@ -168,17 +163,17 @@ varDeclInit: ASSIGN expression {
 ;
 
 funcDecl: DEF IDENTIFIER OPEN_PAR paramListOpt CLOSE_PAR ARROW returnType block { 
-    AstNode* func = static_cast<AstNode*>(new FuncDefinition());
-    dynamic_cast<FuncDefinition*>(func)->name = $2;
+    Nodes params;
     if ($4) {
-        dynamic_cast<FuncDefinition*>(func)->params = *$4;
+        params = *$4;
         delete $4;
     }
+    Nodes body;
     auto blockStmt = dynamic_cast<BlockStmt*>($8);
     if (blockStmt) {
-        dynamic_cast<FuncDefinition*>(func)->body = blockStmt->stmts;
+        body = blockStmt->stmts;
     }
-    $$ = func;
+    $$ = static_cast<AstNode*>(new FuncDefinition($2, params, body));
 }
 ;
 
@@ -209,8 +204,7 @@ paramList: param {
 ;
 
 param: INT paramRefOpt IDENTIFIER { 
-    AstNode* id = static_cast<AstNode*>(new IdentifierExpr());
-    dynamic_cast<IdentifierExpr*>(id)->name = $3;
+    AstNode* id = static_cast<AstNode*>(new IdentifierExpr($3));
     $$ = id;
 }
 ;
@@ -279,10 +273,7 @@ unmatchedStmt: IF OPEN_PAR expression CLOSE_PAR statement {
 ;
 
 assignment: IDENTIFIER ASSIGN expression SEMICOLON { 
-    AstNode* stmt = static_cast<AstNode*>(new AssignStmt());
-    dynamic_cast<AssignStmt*>(stmt)->name = $1;
-    dynamic_cast<AssignStmt*>(stmt)->value = $3;
-    $$ = stmt;
+    $$ = static_cast<AstNode*>(new AssignStmt($1, $3));
 }
 ;
 
@@ -292,11 +283,11 @@ whileStmt: WHILE OPEN_PAR expression CLOSE_PAR statement {
 ;
 
 printStmt: PRINT OPEN_PAR expression CLOSE_PAR SEMICOLON { 
-    AstNode* print = static_cast<AstNode*>(new PrintStmt());
+    Nodes content;
     if ($3) {
-        dynamic_cast<PrintStmt*>(print)->content.push_back($3);
+        content.push_back($3);
     }
-    $$ = print;
+    $$ = static_cast<AstNode*>(new PrintStmt(content));
 }
 ;
 
@@ -314,12 +305,12 @@ exprStmt: funcCall SEMICOLON {
 ;
 
 block: OPEN_BRACE statement_list CLOSE_BRACE { 
-    AstNode* block = static_cast<AstNode*>(new BlockStmt());
+    Nodes stmts;
     if ($2) {
-        dynamic_cast<BlockStmt*>(block)->stmts = *$2;
+        stmts = *$2;
         delete $2;
     }
-    $$ = block;
+    $$ = static_cast<AstNode*>(new BlockStmt(stmts));
 }
 ;
 
@@ -332,10 +323,7 @@ logicalOr: logicalAnd {
     $$ = static_cast<AstNode*>($1);
 }
 | logicalOr OR logicalAnd { 
-    AstNode* expr = static_cast<AstNode*>(new OrExpr());
-    dynamic_cast<OrExpr*>(expr)->left = $1;
-    dynamic_cast<OrExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new OrExpr($1, $3));
 }
 ;
 
@@ -343,10 +331,7 @@ logicalAnd: equality {
     $$ = static_cast<AstNode*>($1);
 }
 | logicalAnd AND equality { 
-    AstNode* expr = static_cast<AstNode*>(new AndExpr());
-    dynamic_cast<AndExpr*>(expr)->left = $1;
-    dynamic_cast<AndExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new AndExpr($1, $3));
 }
 ;
 
@@ -354,16 +339,10 @@ equality: comparison {
     $$ = static_cast<AstNode*>($1);
 }
 | equality EQ comparison { 
-    AstNode* expr = static_cast<AstNode*>(new EqualExpr());
-    dynamic_cast<EqualExpr*>(expr)->left = $1;
-    dynamic_cast<EqualExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new EqualExpr($1, $3));
 }
 | equality NEQ comparison { 
-    AstNode* expr = static_cast<AstNode*>(new NotEqualExpr());
-    dynamic_cast<NotEqualExpr*>(expr)->left = $1;
-    dynamic_cast<NotEqualExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new NotEqualExpr($1, $3));
 }
 ;
 
@@ -371,28 +350,16 @@ comparison: term {
     $$ = static_cast<AstNode*>($1);
 }
 | comparison LT term { 
-    AstNode* expr = static_cast<AstNode*>(new LtExpr());
-    dynamic_cast<LtExpr*>(expr)->left = $1;
-    dynamic_cast<LtExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new LtExpr($1, $3));
 }
 | comparison GT term { 
-    AstNode* expr = static_cast<AstNode*>(new GtExpr());
-    dynamic_cast<GtExpr*>(expr)->left = $1;
-    dynamic_cast<GtExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new GtExpr($1, $3));
 }
 | comparison LTE term { 
-    AstNode* expr = static_cast<AstNode*>(new LteExpr());
-    dynamic_cast<LteExpr*>(expr)->left = $1;
-    dynamic_cast<LteExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new LteExpr($1, $3));
 }
 | comparison GTE term { 
-    AstNode* expr = static_cast<AstNode*>(new GteExpr());
-    dynamic_cast<GteExpr*>(expr)->left = $1;
-    dynamic_cast<GteExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new GteExpr($1, $3));
 }
 ;
 
@@ -400,16 +367,10 @@ term: factor {
     $$ = static_cast<AstNode*>($1);
 }
 | term OP_PLUS factor { 
-    AstNode* expr = static_cast<AstNode*>(new AddExpr());
-    dynamic_cast<AddExpr*>(expr)->left = $1;
-    dynamic_cast<AddExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new AddExpr($1, $3));
 }
 | term OP_MINUS factor { 
-    AstNode* expr = static_cast<AstNode*>(new SubExpr());
-    dynamic_cast<SubExpr*>(expr)->left = $1;
-    dynamic_cast<SubExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new SubExpr($1, $3));
 }
 ;
 
@@ -417,34 +378,21 @@ factor: unary {
     $$ = static_cast<AstNode*>($1);
 }
 | factor OP_MULT unary { 
-    AstNode* expr = static_cast<AstNode*>(new MulExpr());
-    dynamic_cast<MulExpr*>(expr)->left = $1;
-    dynamic_cast<MulExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new MulExpr($1, $3));
 }
 | factor OP_DIV unary { 
-    AstNode* expr = static_cast<AstNode*>(new DivExpr());
-    dynamic_cast<DivExpr*>(expr)->left = $1;
-    dynamic_cast<DivExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new DivExpr($1, $3));
 }
 | factor OP_MOD unary { 
-    AstNode* expr = static_cast<AstNode*>(new ModExpr());
-    dynamic_cast<ModExpr*>(expr)->left = $1;
-    dynamic_cast<ModExpr*>(expr)->right = $3;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new ModExpr($1, $3));
 }
 ;
 
 unary: NOT unary { 
-    AstNode* expr = static_cast<AstNode*>(new NotExpr());
-    dynamic_cast<NotExpr*>(expr)->operand = $2;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new NotExpr($2));
 }
 | OP_MINUS unary { 
-    AstNode* expr = static_cast<AstNode*>(new NegExpr());
-    dynamic_cast<NegExpr*>(expr)->operand = $2;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new NegExpr($2));
 }
 | primary { 
     $$ = static_cast<AstNode*>($1);
@@ -452,14 +400,10 @@ unary: NOT unary {
 ;
 
 primary: CONST_NUMBER { 
-    AstNode* expr = static_cast<AstNode*>(new NumberExpr());
-    dynamic_cast<NumberExpr*>(expr)->value = $1;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new NumberExpr($1));
 }
 | IDENTIFIER { 
-    AstNode* expr = static_cast<AstNode*>(new IdentifierExpr());
-    dynamic_cast<IdentifierExpr*>(expr)->name = $1;
-    $$ = expr;
+    $$ = static_cast<AstNode*>(new IdentifierExpr($1));
 }
 | funcCall { 
     $$ = static_cast<AstNode*>($1);
@@ -470,13 +414,12 @@ primary: CONST_NUMBER {
 ;
 
 funcCall: IDENTIFIER OPEN_PAR argListOpt CLOSE_PAR { 
-    AstNode* call = static_cast<AstNode*>(new CallExpr());
-    dynamic_cast<CallExpr*>(call)->callee = $1;
+    Nodes arguments;
     if ($3) {
-        dynamic_cast<CallExpr*>(call)->arguments = *$3;
+        arguments = *$3;
         delete $3;
     }
-    $$ = call;
+    $$ = static_cast<AstNode*>(new CallExpr($1, arguments));
 }
 ;
 

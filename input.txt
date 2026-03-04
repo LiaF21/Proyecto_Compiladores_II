@@ -1,0 +1,11 @@
+def fibonacci(int n) -> int {   
+if (n <= 1) {   
+return n;   
+}   
+return fibonacci(n - 1) + fibonacci(n - 2);   
+} 
+
+def main() -> void {   
+    print(fibonacci(10)); // Salida: 55   
+return 0;   
+}

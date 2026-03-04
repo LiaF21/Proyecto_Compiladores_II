@@ -2,7 +2,6 @@
 #include "./build/Parser.hpp"
 #include "./build/Lexer.hpp"
 #include "./build/Tree.hpp"
-#include <unordered_map>
 #include <memory>
 #include <fstream>
 
@@ -17,14 +16,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     Lexer lexer(file);
-    std::unordered_map<std::string,int> variables;
-    //ExprP::Parser parser(lexer, variables);
-    try {
-        //int result = parser.parse();
-        std::cout << "Parse completed successfully!" << std::endl;
-        return 0;
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
+    AstNode* root = nullptr;
+    ExprP::Parser my_parser(lexer, root);
+
+    try{
+        my_parser();
+        if (root) {
+            std::cout << root->toString() << std::endl;
+        }
+        std::cout<<"Syntax correct\n";
+    }catch(const ExprP::Parser::syntax_error& e){
+        std::cerr << "Error de sintaxis: " << e.what() << "\n";
     }
+
+
+    return 0;
 }
