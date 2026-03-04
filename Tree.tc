@@ -7,9 +7,12 @@
 
 using stdstring = std::string; 
 using variables = std::unordered_map<stdstring, long>;
+class AstNode;
+using Nodes = std::vector<AstNode*>;
 %}
 
 %{ 
+    #include <iostream>
     #include "tree.hpp"
 %}
 
@@ -17,34 +20,214 @@ using variables = std::unordered_map<stdstring, long>;
 %nocreate int line = {0}; 
 %nocreate int column = {0}; 
 }
- 
+
+%node Stmt AstNode %abstract 
 %node Expr AstNode %abstract
 
-// Nodo binario con dos hijos (expr1 y expr2) 
-%node BinaryExpr Expr %abstract = { 
-   Expr *expr1; 
-   Expr *expr2; 
+%node Program AstNode = {
+    Nodes declarations; 
 }
-// Nodos hoja con herencia de BinaryExpr 
-%node AddExpr BinaryExpr 
-%node MultExpr BinaryExpr
 
-// Nodo terminal con un valor literal 
-%node NumberExpr Expr = { 
-   long value; 
+%node FuncDefinition Stmt = {
+    stdstring name;
+    Nodes params; 
+    Nodes body; 
 }
+
+%node DeclStmt Stmt = {
+    stdstring name;
+}
+
+%node AssignStmt Stmt = {
+    stdstring name;
+    AstNode *value;
+}
+
+%node PrintStmt Stmt = {
+    Nodes content;
+}
+
+%node BlockStmt Stmt = {
+    Nodes stmts;
+}
+
+%node NumberExpr Expr = {
+    long value;
+}
+
 
 %node IdentifierExpr Expr = {
     stdstring name;
 }
 
-%operation %virtual stdstring toString(AstNode *this) 
-toString(AddExpr) {
-    return expr1->toString() + " + " + expr2->toString();
+%node InputExpr Expr
+
+%node CallExpr Expr = {
+    stdstring callee;
+    Nodes arguments;
 }
 
-toString(MultExpr) {
-    return expr1->toString() + " * " + expr2->toString();
+%node UnaryExpr Expr = {
+    AstNode *operand;
+}
+
+%node NotExpr UnaryExpr
+%node NegExpr UnaryExpr
+
+%node LogicalExpr Expr = {
+    AstNode *left;
+    AstNode *right;
+}
+
+%node OrExpr LogicalExpr
+%node AndExpr LogicalExpr
+
+%node CompareExpr Expr = {
+    AstNode *left;
+    AstNode *right;
+}
+
+%node GteExpr CompareExpr
+%node GtExpr CompareExpr
+%node LteExpr CompareExpr
+%node LtExpr CompareExpr
+%node EqualExpr CompareExpr
+%node NotEqualExpr CompareExpr
+
+%node BinaryExpr Expr %abstract = {
+    AstNode *left;
+    AstNode *right;
+}
+
+%node AddExpr BinaryExpr
+%node SubExpr BinaryExpr
+%node MulExpr BinaryExpr
+%node DivExpr BinaryExpr
+%node ModExpr BinaryExpr
+
+%operation %virtual stdstring toString(AstNode *this) 
+toString(Program) {
+    stdstring res = "";
+    for (auto d : declarations) {
+        res += d->toString() + "\n";
+    }
+    return res;
+}
+
+toString(GteExpr) {
+    return left->toString() + " >= " + right->toString();
+}
+
+toString(GtExpr) {
+    return left->toString() + " > " + right->toString();
+}
+
+toString(LteExpr) {
+    return left->toString() + " <= " + right->toString();
+}
+
+toString(LtExpr) {
+    return left->toString() + " < " + right->toString();
+}
+
+toString(EqualExpr) {
+    return left->toString() + " == " + right->toString();
+}
+
+toString(NotEqualExpr) {
+    return left->toString() + " != " + right->toString();
+}
+
+toString(AddExpr) {
+    return left->toString() + " + " + right->toString();
+}
+
+toString(SubExpr) {
+    return left->toString() + " - " + right->toString();
+}
+
+toString(MulExpr) {
+    return left->toString() + " * " + right->toString();
+}
+
+toString(DivExpr) {
+    return left->toString() + " / " + right->toString();
+}
+
+toString(ModExpr) {
+    return left->toString() + " % " + right->toString();
+}
+
+toString(OrExpr) {
+    return left->toString() + " || " + right->toString();
+}
+
+toString(AndExpr) {
+    return left->toString() + " && " + right->toString();
+}
+
+toString(NotExpr) {
+    return "!" + operand->toString();
+}
+
+toString(NegExpr) {
+    return "-" + operand->toString();
+}
+
+toString(InputExpr) {
+    return "input()";
+}
+
+toString(CallExpr) {
+    stdstring res = callee + "(";
+    for (size_t i = 0; i < arguments.size(); ++i) {
+        res += arguments[i]->toString() + (i == arguments.size() - 1 ? "" : ", ");
+    }
+    return res + ")";
+}
+
+toString(DeclStmt) {
+    return "var " + name + ";";
+}
+
+toString(AssignStmt) {
+    return name + " = " + value->toString() + ";";
+}
+
+toString(BlockStmt) {
+    stdstring res = "{\n";
+    for (auto s : stmts) {
+        res += "  " + s->toString() + "\n";
+    }
+    res += "}";
+    return res;
+}
+
+toString(PrintStmt) {
+    stdstring res = "print(";
+    for (size_t i = 0; i < content.size(); ++i) {
+        res += content[i]->toString() + (i == content.size() - 1 ? "" : ", ");
+    }
+    return res + ");";
+}
+
+toString(FuncDefinition) {
+    stdstring res = "def " + name + "(";
+    for (size_t i = 0; i < params.size(); ++i) {
+        res += params[i]->toString();
+        if (i < params.size() - 1) {
+            res += ", ";
+        }
+    }
+    res += ") ";
+
+    res += "{\n";
+    for (auto const& s : body) {
+        res += "    " + s->toString() + "\n";
+    }
+    res += "}";
+    
+    return res;
 }
 
 toString(NumberExpr) {
@@ -55,28 +238,13 @@ toString(IdentifierExpr) {
     return name;
 }
 
-%operation %virtual int evaluate(AstNode *this,variables *vars)
+toString(UnaryExpr) { return ""; }
 
-evaluate(AddExpr) {
-    return expr1->evaluate(vars) + expr2->evaluate(vars);
-}
+toString(LogicalExpr) { return ""; }
 
-evaluate(MultExpr) {
-    return expr1->evaluate(vars) * expr2->evaluate(vars);
-}
+toString(CompareExpr) { return ""; }
 
-evaluate(NumberExpr){
-    return value;
-}
 
-evaluate(IdentifierExpr){
-    auto result = vars->find(name);
-    if(result == vars->end()){
-        std::cerr << "Error: '" << name << "' no definida" << std::endl;
-        return 0;
-    }
-    return result->second;
-}
 
 
 
