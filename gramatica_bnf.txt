@@ -2,8 +2,9 @@ Gramatica del Proyecto BNF
 
 program -> declaration_list
 
-declaration_list -> declaration declaration_list 
 declaration_list -> ε
+declaration_list -> declaration declaration_list 
+
 
 declaration -> varDecl declaration -> funcDecl
 
@@ -42,7 +43,7 @@ unmatchedStmt -> “if” “(” expression “)” statement unmatchedStmt -> 
 
 assignment -> IDENTIFIER “=” expression “;”
 
-whileStmt -> “while” “(” expression “)” statement
+whileStmt -> “while” “(” expression “)” matchedStmt
 
 printStmt -> “print” “(” expression “)” “;”
 
@@ -52,8 +53,9 @@ returnExprOpt -> ε
 
 exprStmt -> funcCall “;”
 
-block -> “{” statement_list “}” statement_list -> statement
-statement_list statement_list -> ε
+block -> “{” statement_list “}”
+statement_list -> ε
+statement_list -> statement statement_list 
 
 expression -> logicalOr
 

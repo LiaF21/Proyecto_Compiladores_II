@@ -57,7 +57,7 @@
 %nterm <AstNode*> declaration
 %nterm <AstNode*> varDecl varDeclInit
 %nterm <AstNode*> funcDecl
-%nterm <std::string> returnType
+%nterm <AstNode*> returnType
 %nterm <Nodes*> paramListOpt paramList
 %nterm <AstNode*> param paramRefOpt
 %nterm <Nodes*> statement_list
@@ -122,18 +122,14 @@ program: declaration_list {
 }
 ;
 
-declaration_list: declaration declaration_list { 
-    if ($2) {
-        $$ = $2;
-    } else {
-        $$ = new Nodes();
-    }
-    if ($1) {
-        $$->insert($$->begin(), $1);
-    }
+declaration_list: %empty { 
+    $$ = new Nodes();
 }
-| %empty { 
-    $$ = new Nodes(); 
+| declaration_list declaration { 
+    $$ = $1;
+    if ($2) {
+        $$->push_back($2);
+    }
 }
 ;
 
@@ -173,15 +169,15 @@ funcDecl: DEF IDENTIFIER OPEN_PAR paramListOpt CLOSE_PAR ARROW returnType block 
     if (blockStmt) {
         body = blockStmt->stmts;
     }
-    $$ = static_cast<AstNode*>(new FuncDefinition($2, params, body));
+    $$ = static_cast<AstNode*>(new FuncDefinition($2, params, $7, body));
 }
 ;
 
 returnType: INT { 
-    $$ = "int";
+    $$ = static_cast<AstNode*>(new IntType());
 }
 | VOID { 
-    $$ = "void";
+    $$ = static_cast<AstNode*>(new VoidType());
 }
 ;
 
@@ -217,16 +213,12 @@ paramRefOpt: REF {
 }
 ;
 
-statement_list: statement { 
-    $$ = new Nodes();
-    if ($1) $$->push_back($1);
-}
-| statement statement_list { 
-    $$ = $2;
-    if ($1) $$->insert($$->begin(), $1);
-}
-| %empty { 
+statement_list: %empty { 
     $$ = new Nodes(); 
+}
+| statement_list statement { 
+    $$ = $1;
+    if ($2) $$->push_back($2);
 }
 ;
 
@@ -260,15 +252,15 @@ matchedStmt: varDecl {
     $$ = static_cast<AstNode*>($1);
 }
 | IF OPEN_PAR expression CLOSE_PAR matchedStmt ELSE matchedStmt { 
-    $$ = static_cast<AstNode*>($5);
+    $$ = static_cast<AstNode*>(new IfStmt($3, $5, $7));
 }
 ;
 
 unmatchedStmt: IF OPEN_PAR expression CLOSE_PAR statement { 
-    $$ = static_cast<AstNode*>($5);
+    $$ = static_cast<AstNode*>(new IfStmt($3, $5, nullptr));
 }
 | IF OPEN_PAR expression CLOSE_PAR matchedStmt ELSE unmatchedStmt { 
-    $$ = static_cast<AstNode*>($5);
+    $$ = static_cast<AstNode*>(new IfStmt($3, $5, $7));
 }
 ;
 
@@ -277,8 +269,8 @@ assignment: IDENTIFIER ASSIGN expression SEMICOLON {
 }
 ;
 
-whileStmt: WHILE OPEN_PAR expression CLOSE_PAR statement { 
-    $$ = static_cast<AstNode*>($5);
+whileStmt: WHILE OPEN_PAR expression CLOSE_PAR matchedStmt { 
+    $$ = static_cast<AstNode*>(new WhileStmt($3, $5));
 }
 ;
 
@@ -292,10 +284,10 @@ printStmt: PRINT OPEN_PAR expression CLOSE_PAR SEMICOLON {
 ;
 
 returnStmt: RETURN expression SEMICOLON { 
-    $$ = static_cast<AstNode*>($2);
+    $$ = static_cast<AstNode*>(new ReturnStmt($2));
 }
 | RETURN SEMICOLON { 
-    $$ = nullptr;
+    $$ = static_cast<AstNode*>(new ReturnStmt(nullptr));
 }
 ;
 

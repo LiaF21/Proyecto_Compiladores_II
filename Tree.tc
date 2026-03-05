@@ -32,6 +32,7 @@ using Nodes = std::vector<AstNode*>;
 %node FuncDefinition Stmt = {
     stdstring name;
     Nodes params; 
+    AstNode *returnType;
     Nodes body; 
 }
 
@@ -51,6 +52,24 @@ using Nodes = std::vector<AstNode*>;
 %node BlockStmt Stmt = {
     Nodes stmts;
 }
+
+%node IfStmt Stmt = {
+    AstNode *condition;
+    AstNode *thenStmt;
+    AstNode *elseStmt;
+}
+
+%node WhileStmt Stmt = {
+    AstNode *condition;
+    AstNode *body;
+}
+
+%node ReturnStmt Stmt = {
+    AstNode *value;
+}
+
+%node IntType Expr
+%node VoidType Expr
 
 %node NumberExpr Expr = {
     long value;
@@ -90,20 +109,20 @@ using Nodes = std::vector<AstNode*>;
 
 %node GteExpr CompareExpr
 %node GtExpr CompareExpr
-%node LteExpr CompareExpr
+%node LteExpr CompareExpr 
 %node LtExpr CompareExpr
 %node EqualExpr CompareExpr
-%node NotEqualExpr CompareExpr
+%node NotEqualExpr CompareExpr  
 
 %node BinaryExpr Expr %abstract = {
     AstNode *left;
     AstNode *right;
 }
 
-%node AddExpr BinaryExpr
+%node AddExpr BinaryExpr 
 %node SubExpr BinaryExpr
 %node MulExpr BinaryExpr
-%node DivExpr BinaryExpr
+%node DivExpr BinaryExpr 
 %node ModExpr BinaryExpr
 
 %operation %virtual stdstring toString(AstNode *this) 
@@ -204,6 +223,26 @@ toString(BlockStmt) {
     return res;
 }
 
+toString(IfStmt) {
+    stdstring res = "if (" + condition->toString() + ") ";
+    res += thenStmt->toString();
+    if (elseStmt) {
+        res += " else " + elseStmt->toString();
+    }
+    return res;
+}
+
+toString(WhileStmt) {
+    return "while (" + condition->toString() + ") " + body->toString();
+}
+
+toString(ReturnStmt) {
+    if (value) {
+        return "return " + value->toString() + ";";
+    }
+    return "return;";
+}
+
 toString(PrintStmt) {
     stdstring res = "print(";
     for (size_t i = 0; i < content.size(); ++i) {
@@ -220,7 +259,7 @@ toString(FuncDefinition) {
             res += ", ";
         }
     }
-    res += ") ";
+    res += ") -> " + returnType->toString() + " ";
 
     res += "{\n";
     for (auto const& s : body) {
@@ -239,11 +278,25 @@ toString(IdentifierExpr) {
     return name;
 }
 
-toString(UnaryExpr) { return ""; }
+toString(UnaryExpr) { 
+    return operand->toString(); 
+}
 
-toString(LogicalExpr) { return ""; }
+toString(LogicalExpr) { 
+    return left->toString() + " " + right->toString(); 
+}
 
-toString(CompareExpr) { return ""; }
+toString(CompareExpr) { 
+    return left->toString() + " " + right->toString(); 
+}
+
+toString(IntType) {
+    return "int";
+}
+
+toString(VoidType) {
+    return "void";
+}
 
 
 

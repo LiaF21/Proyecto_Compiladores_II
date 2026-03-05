@@ -1,11 +1,17 @@
-def fibonacci(int n) -> int {   
-if (n <= 1) {   
-return n;   
-}   
-return fibonacci(n - 1) + fibonacci(n - 2);   
+int global_counter = 0; 
+def swap(int ref a, int ref b) -> int {   
+    int temp = a;   
+    a = b;   
+    b = temp;   
+    global_counter = global_counter + 1;   
+    return 1;   
 } 
-
-def main() -> void {   
-    print(fibonacci(10)); // Salida: 55   
-return 0;   
-}
+def main() -> int {   
+    int x = 10;   
+    int y = 20;   
+    swap(x, y);   
+    print(x); // Salida: 20   
+    print(y); // Salida: 10   
+    print(global_counter); // Salida: 1   
+    return 0;   
+} 
