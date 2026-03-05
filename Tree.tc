@@ -36,13 +36,23 @@ using Nodes = std::vector<AstNode*>;
     Nodes body; 
 }
 
-%node DeclStmt Stmt = {
-    stdstring name;
-}
 
 %node AssignStmt Stmt = {
     stdstring name;
     AstNode *value;
+}
+
+%node VarDeclStmt Stmt = {
+    stdstring name;
+    AstNode *initValue;
+}
+
+%node Param AstNode = {
+    stdstring name;
+}
+
+%node RefParam AstNode = {
+    stdstring name;
 }
 
 %node PrintStmt Stmt = {
@@ -206,12 +216,23 @@ toString(CallExpr) {
     return res + ")";
 }
 
-toString(DeclStmt) {
-    return "var " + name + ";";
-}
-
 toString(AssignStmt) {
     return name + " = " + value->toString() + ";";
+}
+
+toString(VarDeclStmt) {
+    if (initValue) {
+        return "int " + name + " = " + initValue->toString() + ";";
+    }
+    return "int " + name + ";";
+}
+
+toString(Param) {
+    return "int " + name;
+}
+
+toString(RefParam) {
+    return "int ref " + name;
 }
 
 toString(BlockStmt) {

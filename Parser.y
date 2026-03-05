@@ -59,7 +59,8 @@
 %nterm <AstNode*> funcDecl
 %nterm <AstNode*> returnType
 %nterm <Nodes*> paramListOpt paramList
-%nterm <AstNode*> param paramRefOpt
+%nterm <AstNode*> param
+%nterm <bool*> paramRefOpt
 %nterm <Nodes*> statement_list
 %nterm <AstNode*> statement matchedStmt unmatchedStmt
 %nterm <AstNode*> assignment whileStmt printStmt returnStmt exprStmt block
@@ -143,9 +144,9 @@ declaration: varDecl {
 
 varDecl: INT IDENTIFIER varDeclInit SEMICOLON { 
     if ($3) {
-        $$ = static_cast<AstNode*>(new AssignStmt($2, $3));
+        $$ = static_cast<AstNode*>(new VarDeclStmt($2, $3));
     } else {
-        $$ = static_cast<AstNode*>(new DeclStmt($2));
+        $$ = static_cast<AstNode*>(new VarDeclStmt($2, nullptr));
     }
 }
 ;
@@ -200,16 +201,19 @@ paramList: param {
 ;
 
 param: INT paramRefOpt IDENTIFIER { 
-    AstNode* id = static_cast<AstNode*>(new IdentifierExpr($3));
-    $$ = id;
+    if ($2 && *$2) {
+        $$ = static_cast<AstNode*>(new RefParam($3));
+    } else {
+        $$ = static_cast<AstNode*>(new Param($3));
+    }
 }
 ;
 
 paramRefOpt: REF { 
-    $$ = nullptr; 
+    $$ = new bool(true); 
 }
 | %empty { 
-    $$ = nullptr; 
+    $$ = new bool(false); 
 }
 ;
 
