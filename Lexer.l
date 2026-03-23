@@ -54,6 +54,8 @@
 "{"      { return ExprP::Parser::token::OPEN_BRACE; }
 "}"      { return ExprP::Parser::token::CLOSE_BRACE; }
 "->"     { return ExprP::Parser::token::ARROW; }
+"["      { return ExprP::Parser::token::OSQR_BRACE; }
+"]"      { return ExprP::Parser::token::CSQR_BRACE; }
 [ \t\r\n] /* no action: ignore all white space */
 .       { throw std::runtime_error("Caracter inesperado: " + std::string(text())); }
 %%

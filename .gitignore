@@ -1,5 +1,6 @@
 # Prerequisites
 *.d
+codegen-llvm.md
 
 # Compiled Object files
 *.slo
@@ -37,6 +38,8 @@
 *.out
 *.app
 build/
+build_LLVM/
+EJECUTABLE.ll
 
 # debug information files
 cmake/

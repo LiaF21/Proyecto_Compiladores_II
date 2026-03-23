@@ -18,7 +18,8 @@ returnType -> “void”
 
 paramListOpt -> paramList paramListOpt -> ε
 
-paramList -> param paramListTail paramListTail -> “,” param
+paramList -> param paramListTail 
+paramListTail -> “,” param
 paramListTail paramListTail -> ε
 
 param -> “int” paramRefOpt IDENTIFIER 
@@ -38,8 +39,8 @@ matchedStmt -> block
 matchedStmt -> “if” “(” expression “)”
 matchedStmt “else” matchedStmt
 
-unmatchedStmt -> “if” “(” expression “)” statement unmatchedStmt -> “if”
-“(” expression “)” matchedStmt “else” unmatchedStmt
+unmatchedStmt -> “if” “(” expression “)” statement 
+unmatchedStmt -> “if” “(” expression “)” matchedStmt “else” unmatchedStmt
 
 assignment -> IDENTIFIER “=” expression “;”
 

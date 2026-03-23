@@ -39,6 +39,8 @@
 %token COMMA "','"
 %token OPEN_BRACE "'{'"
 %token CLOSE_BRACE "'}'"
+%token OSQR_BRACE "'['"
+%token CSQR_BRACE "']'"
 
 // Literals and Identifiers
 %token <long> CONST_NUMBER "num"
@@ -55,7 +57,7 @@
 %nterm <AstNode*> program
 %nterm <Nodes*> declaration_list
 %nterm <AstNode*> declaration
-%nterm <AstNode*> varDecl varDeclInit
+%nterm <AstNode*> varDecl varDeclInit 
 %nterm <AstNode*> funcDecl
 %nterm <AstNode*> returnType
 %nterm <Nodes*> paramListOpt paramList
@@ -158,6 +160,7 @@ varDeclInit: ASSIGN expression {
     $$ = nullptr;
 }
 ;
+
 
 funcDecl: DEF IDENTIFIER OPEN_PAR paramListOpt CLOSE_PAR ARROW returnType block { 
     Nodes params;

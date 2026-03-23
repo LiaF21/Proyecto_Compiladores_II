@@ -5,11 +5,14 @@
 #include <string> 
 #include <unordered_map>
 #include <vector>
+#include <sstream>
+#include "../CodeGenerator.hpp"
 
 using stdstring = std::string; 
 using variables = std::unordered_map<stdstring, long>;
 class AstNode;
 using Nodes = std::vector<AstNode*>;
+
 %}
 
 %{ 
@@ -318,6 +321,294 @@ toString(IntType) {
 toString(VoidType) {
     return "void";
 }
+
+
+
+%operation %virtual CodeGenResult evaluate(AstNode *this, CodeGenerator& gen)
+
+evaluate(NumberExpr) {
+    return gen.genIntLiteral(value);
+}
+
+evaluate(IdentifierExpr) {
+    return gen.genVariable(name);
+}
+
+evaluate(AddExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genArithmeticExpr("+", left, right);
+}
+
+evaluate(SubExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genArithmeticExpr("-", left, right);
+}
+
+evaluate(MulExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genArithmeticExpr("*", left, right);
+}
+
+evaluate(DivExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genArithmeticExpr("/", left, right);
+}
+
+evaluate(ModExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genArithmeticExpr("%", left, right);
+}
+
+// Operadores Unarios
+evaluate(NegExpr) {
+    auto operand_result = operand->evaluate(gen);
+    return gen.genUnaryExpr("-", operand_result);
+}
+
+evaluate(NotExpr) {
+    auto operand_result = operand->evaluate(gen);
+    return gen.genUnaryExpr("!", operand_result);
+}
+
+// Comparaciones
+evaluate(LtExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genComparison("<", left, right);
+}
+
+evaluate(LteExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genComparison("<=", left, right);
+}
+
+evaluate(GtExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genComparison(">", left, right);
+}
+
+evaluate(GteExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genComparison(">=", left, right);
+}
+
+evaluate(EqualExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genComparison("==", left, right);
+}
+
+evaluate(NotEqualExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genComparison("!=", left, right);
+}
+
+evaluate(VarDeclStmt) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    
+    if (initValue) {
+        auto initResult = initValue->evaluate(gen);
+        gen.genVarDeclaration(name, &initResult);
+    } else {
+        gen.genVarDeclaration(name, nullptr);
+    }
+    return result;
+}
+
+evaluate(AssignStmt) {
+    auto valueResult = value->evaluate(gen);
+    gen.genAssignment(name, valueResult);
+    
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    return result;
+}
+
+evaluate(IntType) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "i64";
+    return result;
+}
+
+evaluate(VoidType) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "void";
+    return result;
+}
+
+evaluate(BlockStmt) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    
+    for (auto stmt : stmts) {
+        stmt->evaluate(gen);
+    }
+    return result;
+}
+
+evaluate(Program) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    
+    for (auto decl : declarations) {
+        decl->evaluate(gen);
+    }
+    return result;
+}
+
+evaluate(CompareExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genComparison("?", left, right); 
+}
+
+evaluate(AndExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genLogicalAnd(left, right);
+}
+
+evaluate(OrExpr) {
+    auto left = this->left->evaluate(gen);
+    auto right = this->right->evaluate(gen);
+    return gen.genLogicalOr(left, right);
+}
+
+evaluate(LogicalExpr) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    return result;
+}
+
+evaluate(InputExpr) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    return result;
+}
+
+evaluate(IfStmt) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+}
+
+evaluate(WhileStmt) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+}
+
+evaluate(PrintStmt) {
+    std::vector<CodeGenResult> contentResults;
+    for (auto item : content) {
+        contentResults.push_back(item->evaluate(gen));
+    }
+    gen.genPrint(contentResults);
+    
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    return result;
+}
+
+evaluate(UnaryExpr) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    return result;
+}
+
+evaluate(ReturnStmt) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    
+    if (value) {
+        auto valueResult = value->evaluate(gen);
+        gen.genReturnStmt(&valueResult);
+    } else {
+        gen.genReturnStmt(nullptr);
+    }
+    return result;
+}
+
+evaluate(FuncDefinition) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+
+    std::vector<CodeGenResult> paramResults;
+    for (auto param : params) {
+        paramResults.push_back(param->evaluate(gen));
+    }
+    auto returnTypeResult = returnType->evaluate(gen);
+    gen.saveAndClearCode();
+    for (auto stmt : body) {
+        stmt->evaluate(gen);
+    }
+    std::string bodyCode = gen.restoreCodeAndGetCapture();
+    gen.genFunctionDefinition(name, paramResults, returnTypeResult, bodyCode);
+    
+    return result;
+}
+
+evaluate(CallExpr) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    return result;
+}
+
+evaluate(Param) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    return result;
+}
+
+evaluate(RefParam) {
+    CodeGenResult result;
+    result.code = "";
+    result.place = "";
+    result.type = "";
+    return result;
+}
+
+
 
 
 
