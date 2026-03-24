@@ -21,7 +21,7 @@ public:
 
 private:
     std::stringstream code;
-    std::stringstream savedCode; r
+    std::vector<std::string> codeStack; 
     int tempCounter = 0;
     int labelCounter = 0;
     std::unordered_map<std::string, std::string> symbolTable;
@@ -31,17 +31,22 @@ public:
     CodeGenerator() {}
 
     void saveAndClearCode() {
-        savedCode << code.str();
+        codeStack.push_back(code.str());
         code.str("");
         code.clear();
     }
 
     std::string restoreCodeAndGetCapture() {
         std::string capturedCode = code.str();
-        code.str(savedCode.str());
-        code.clear();
-        savedCode.str("");
-        savedCode.clear();
+        if (!codeStack.empty()) {
+            code.str(codeStack.back());
+            code.clear();
+            code.seekp(0, std::ios::end); 
+            codeStack.pop_back();
+        } else {
+            code.str("");
+            code.clear();
+        }
         return capturedCode;
     }
 
@@ -68,7 +73,13 @@ public:
         
         auto it = variableAddresses.find(name);
         if (it != variableAddresses.end()) {
-            result.code = result.place + " = load i64, i64* %" + name + ".addr\n";
+            std::string type = symbolTable[name];
+            if (type == "i64*") {
+                std::string actualAddr = variableAddresses[name];
+                result.code = result.place + " = load i64, i64* " + actualAddr + "\n";
+            } else {
+                result.code = result.place + " = load i64, i64* %" + name + ".addr\n";
+            }
         } else {
             result.code = ""; 
         }
@@ -115,8 +126,16 @@ public:
     }
 
     void genAssignment(const std::string& varName, CodeResult& valueResult) {
-        code << valueResult.code;
-        code << "store i64 " << valueResult.place << ", i64* %" << varName << ".addr\n";
+        code << valueResult.code;        if (!varName.empty()) {
+            auto it = symbolTable.find(varName);
+            if (it != symbolTable.end() && it->second == "i64*") {
+                code << "store i64 " << valueResult.place << ", i64* " << variableAddresses[varName] << "\n";
+            } else {
+                code << "store i64 " << valueResult.place << ", i64* %" << varName << ".addr\n";
+            }
+        } else {
+            code << "; ERROR: assignment to empty variable\n";
+        }
     }
 
     void genVarDeclaration(const std::string& varName, CodeResult* initValue = nullptr) {
@@ -133,8 +152,22 @@ public:
     CodeResult genUnaryExpr(const std::string& op, CodeResult& operand) {
         CodeResult result;
         result.place = newTemp();
-        result.type = "i64";
-        result.code = operand.code;
+        
+        if (op == "-") {
+            result.type = "i64";
+            result.code = operand.code;
+            result.code += result.place + " = sub i64 0, " + operand.place + "\n";
+        } else if (op == "!") {
+            result.type = "i1";
+            result.code = operand.code;
+            std::string tempI1 = operand.place;
+            if (operand.type == "i64") {
+                tempI1 = newTemp();
+                result.code += tempI1 + " = icmp ne i64 " + operand.place + ", 0\n";
+            }
+            result.code += result.place + " = xor i1 " + tempI1 + ", 1\n";
+            result.type = "i1";
+        }
         return result;
     }
 
@@ -144,20 +177,23 @@ public:
         std::string LEnd = newLabel();
 
         code << condition.code;
-        code << "br i1 " << condition.place << ", label %" << LThen 
+        std::string condPlace = condition.place;
+        if (condition.type == "i64") {
+            condPlace = newTemp();
+            code << condPlace << " = icmp ne i64 " << condition.place << ", 0\n";
+        }
+
+        code << "br i1 " << condPlace << ", label %" << LThen 
              << ", label %" << LElse << "\n";
         code << LThen << ":\n";
         code << thenCode.code;
         code << "br label %" << LEnd << "\n";
 
+        code << LElse << ":\n";
         if (!elseCode.code.empty()) {
-            code << LElse << ":\n";
             code << elseCode.code;
-            code << "br label %" << LEnd << "\n";
-        } else {
-            code << LElse << ":\n";
-            code << "br label %" << LEnd << "\n";
         }
+        code << "br label %" << LEnd << "\n";
 
         code << LEnd << ":\n";
     }
@@ -170,7 +206,14 @@ public:
         code << "br label %" << LCond << "\n";
         code << LCond << ":\n";
         code << condition.code;
-        code << "br i1 " << condition.place << ", label %" << LBody 
+
+        std::string condPlace = condition.place;
+        if (condition.type == "i64") {
+            condPlace = newTemp();
+            code << condPlace << " = icmp ne i64 " << condition.place << ", 0\n";
+        }
+
+        code << "br i1 " << condPlace << ", label %" << LBody 
              << ", label %" << LEnd << "\n";
         code << LBody << ":\n";
         code << body.code;
@@ -181,7 +224,24 @@ public:
     void genPrint(const std::vector<CodeResult>& expressions) {
         for (const auto& expr : expressions) {
             code << expr.code;
-            code << "call i32 (i8*, ...) @printf(i8* @str, i64 " << expr.place << ")\n";
+            std::string valToPrint = expr.place;
+            if (expr.type == "i1") {
+                valToPrint = newTemp();
+                code << valToPrint << " = zext i1 " << expr.place << " to i64\n";
+            }
+            code << "call i32 (i8*, ...) @printf(i8* @str, i64 " << valToPrint << ")\n";
+        }
+    }
+
+    void genFunctionDefinitionPreamble(const std::vector<CodeGenResult>& params) {
+        for (const auto& param : params) {
+            if (param.type == "i64*") {
+                variableAddresses[param.place] = "%" + param.place;
+                symbolTable[param.place] = "i64*";
+            } else {
+                variableAddresses[param.place] = "%" + param.place + ".addr";
+                symbolTable[param.place] = "i64";
+            }
         }
     }
 
@@ -190,29 +250,51 @@ public:
         
         code << "define " << returnTypeStr << " @" << name << "(";
         for (size_t i = 0; i < params.size(); ++i) {
-            code << "i64 %" << params[i].place;
+            code << params[i].type << " %" << params[i].place;
             if (i < params.size() - 1) {
                 code << ", ";
             }
         }
         code << ") {\n";
         code << "entry:\n";
+        for (const auto& param : params) {
+            if (param.type != "i64*") {
+                std::string addrName = "%" + param.place + ".addr";
+                code << "  " << addrName << " = alloca i64\n";
+                code << "  store i64 %" << param.place << ", i64* " << addrName << "\n";
+            }
+        }
+
         code << bodyCode;  
         
         if (returnTypeStr == "void") {
-            code << "ret void\n";
+            code << "  ret void\n";
+        } else {
+            code << "  ret i64 0\n";
         }
         code << "}\n";
     }
-
 
     CodeResult genFunctionCall(const std::string& funcName, const std::vector<CodeResult>& args) {
         CodeResult result;
         result.place = newTemp();
         result.type = "i64"; 
+        
+        std::string argsCode = "";
+        std::string argsList = "";
+        for (size_t i = 0; i < args.size(); ++i) {
+            argsCode += args[i].code;
+            argsList += args[i].type + " " + args[i].place;
+            if (i < args.size() - 1) {
+                argsList += ", ";
+            }
+        }
+
+        result.code = argsCode;
+        result.code += result.place + " = call i64 @" + funcName + "(" + argsList + ")\n";
+        
         return result;
     }
-
 
     CodeResult genLogicalAnd(CodeResult& left, CodeResult& right) {
         CodeResult result;
@@ -220,7 +302,19 @@ public:
         result.type = "i1";
         
         result.code = left.code + right.code;
-        result.code += result.place + " = and i1 " + left.place + ", " + right.place + "\n";
+        
+        std::string lPlace = left.place;
+        if (left.type == "i64") {
+            lPlace = newTemp();
+            result.code += lPlace + " = icmp ne i64 " + left.place + ", 0\n";
+        }
+        std::string rPlace = right.place;
+        if (right.type == "i64") {
+            rPlace = newTemp();
+            result.code += rPlace + " = icmp ne i64 " + right.place + ", 0\n";
+        }
+
+        result.code += result.place + " = and i1 " + lPlace + ", " + rPlace + "\n";
         
         return result;
     }
@@ -231,25 +325,42 @@ public:
         result.type = "i1";
         
         result.code = left.code + right.code;
-        result.code += result.place + " = or i1 " + left.place + ", " + right.place + "\n";
+
+        std::string lPlace = left.place;
+        if (left.type == "i64") {
+            lPlace = newTemp();
+            result.code += lPlace + " = icmp ne i64 " + left.place + ", 0\n";
+        }
+        std::string rPlace = right.place;
+        if (right.type == "i64") {
+            rPlace = newTemp();
+            result.code += rPlace + " = icmp ne i64 " + right.place + ", 0\n";
+        }
+
+        result.code += result.place + " = or i1 " + lPlace + ", " + rPlace + "\n";
         
         return result;
     }
 
-  
     void genReturnStmt(CodeResult* value) {
         if (value) {
             code << value->code;
-            code << "ret i64 " << value->place << "\n";
+            std::string retVal = value->place;
+            if (value->type == "i1") {
+                retVal = newTemp();
+                code << retVal << " = zext i1 " << value->place << " to i64\n";
+            }
+            code << "  ret i64 " << retVal << "\n";
         } else {
-            code << "ret void\n";
+            code << "  ret void\n";
         }
     }
 
     CodeResult genInput() {
         CodeResult result;
-        result.place = newTemp();
-        result.type = "i64";;
+        result.place = ""; 
+        result.type = "void";
+        result.code = "; Input not implemented per user request\n";
         return result;
     }
 
@@ -264,6 +375,7 @@ public:
         labelCounter = 0;
         symbolTable.clear();
         variableAddresses.clear();
+        codeStack.clear();
     }
 };
 

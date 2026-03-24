@@ -364,7 +364,6 @@ evaluate(ModExpr) {
     return gen.genArithmeticExpr("%", left, right);
 }
 
-// Operadores Unarios
 evaluate(NegExpr) {
     auto operand_result = operand->evaluate(gen);
     return gen.genUnaryExpr("-", operand_result);
@@ -375,7 +374,6 @@ evaluate(NotExpr) {
     return gen.genUnaryExpr("!", operand_result);
 }
 
-// Comparaciones
 evaluate(LtExpr) {
     auto left = this->left->evaluate(gen);
     auto right = this->right->evaluate(gen);
@@ -505,11 +503,7 @@ evaluate(LogicalExpr) {
 }
 
 evaluate(InputExpr) {
-    CodeGenResult result;
-    result.code = "";
-    result.place = "";
-    result.type = "";
-    return result;
+    return gen.genInput();
 }
 
 evaluate(IfStmt) {
@@ -517,6 +511,24 @@ evaluate(IfStmt) {
     result.code = "";
     result.place = "";
     result.type = "";
+    
+    auto conditionResult = condition->evaluate(gen);
+    
+    gen.saveAndClearCode();
+    auto thenResult = this->thenStmt->evaluate(gen);
+    std::string thenCode = gen.restoreCodeAndGetCapture();
+    thenResult.code = thenCode;
+    
+    CodeGenResult elseResult{"", "", ""};
+    if (this->elseStmt) {
+        gen.saveAndClearCode();
+        elseResult = this->elseStmt->evaluate(gen);
+        std::string elseCode = gen.restoreCodeAndGetCapture();
+        elseResult.code = elseCode;
+    }
+    
+    gen.genIfStatement(conditionResult, thenResult, elseResult);
+    return result;
 }
 
 evaluate(WhileStmt) {
@@ -524,6 +536,16 @@ evaluate(WhileStmt) {
     result.code = "";
     result.place = "";
     result.type = "";
+    
+    auto conditionResult = condition->evaluate(gen);
+    
+    gen.saveAndClearCode();
+    auto bodyResult = this->body->evaluate(gen);
+    std::string bodyCode = gen.restoreCodeAndGetCapture();
+    bodyResult.code = bodyCode;
+    
+    gen.genWhileStatement(conditionResult, bodyResult);
+    return result;
 }
 
 evaluate(PrintStmt) {
@@ -541,11 +563,8 @@ evaluate(PrintStmt) {
 }
 
 evaluate(UnaryExpr) {
-    CodeGenResult result;
-    result.code = "";
-    result.place = "";
-    result.type = "";
-    return result;
+    auto operandResult = operand->evaluate(gen);
+    return gen.genUnaryExpr("?", operandResult); 
 }
 
 evaluate(ReturnStmt) {
@@ -574,6 +593,8 @@ evaluate(FuncDefinition) {
         paramResults.push_back(param->evaluate(gen));
     }
     auto returnTypeResult = returnType->evaluate(gen);
+    gen.genFunctionDefinitionPreamble(paramResults);
+
     gen.saveAndClearCode();
     for (auto stmt : body) {
         stmt->evaluate(gen);
@@ -586,25 +607,28 @@ evaluate(FuncDefinition) {
 
 evaluate(CallExpr) {
     CodeGenResult result;
-    result.code = "";
-    result.place = "";
-    result.type = "";
+    
+    std::vector<CodeGenResult> argResults;
+    for (auto arg : arguments) {
+        argResults.push_back(arg->evaluate(gen));
+    }
+    result = gen.genFunctionCall(callee, argResults);
     return result;
 }
 
 evaluate(Param) {
     CodeGenResult result;
     result.code = "";
-    result.place = "";
-    result.type = "";
+    result.place = name;  
+    result.type = "i64";  
     return result;
 }
 
 evaluate(RefParam) {
     CodeGenResult result;
     result.code = "";
-    result.place = "";
-    result.type = "";
+    result.place = name;  
+    result.type = "i64*";  
     return result;
 }
 

@@ -2,7 +2,18 @@ def main () -> void {
     int x = 10;
     int y = 20;
     int z = x + y;
-    
     print(z);
+
+    if(z > 25) {
+        print(z);
+    } else {
+       z = z - 5;
+       print(z);
+    }
+
+    while(x > 0) {
+        print(z);
+        x = x - 1;
+    }
 }
 
